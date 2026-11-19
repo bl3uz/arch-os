@@ -59,6 +59,10 @@
       background: rgba(10, 32, 38, 0.52);
       box-shadow: 0 0 0 1px var(--accent), 0 0 24px var(--accent-dim), 0 24px 54px -14px rgba(0,0,0,0.9);
     }
+    .win.active-focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 0 28px var(--accent-dim), 0 24px 54px -14px rgba(0,0,0,0.9);
+    }
 
     .bar {
       display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px;
@@ -149,6 +153,17 @@
     .term-out b { color: var(--accent); }
     .term-in { display: flex; gap: 7px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border); }
     #tcmd { flex: 1; background: transparent; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 11px; caret-color: var(--accent); }
+
+    /* Neofetch */
+    .neo-box { display: flex; gap: 12px; align-items: center; font-size: 11px; }
+    .neo-art { color: var(--accent); font-size: 9px; line-height: 1.1; white-space: pre; }
+    .neo-info b { color: var(--accent); }
+
+    /* Htop */
+    .htop-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .htop-table th { color: var(--muted); text-align: left; border-bottom: 1px solid var(--border); padding-bottom: 3px; font-weight: normal; }
+    .htop-table td { padding: 3px 0; border-bottom: 1px solid #143038; font-variant-numeric: tabular-nums; }
+    .htop-table tr:last-child td { border-bottom: 0; }
 
     /* Taskbar */
     #win-list {
@@ -291,7 +306,50 @@
     </div>
   </div>
 
-  <!-- INTERACTIVE TERMINAL -->
+  <!-- NEOFETCH (Top-Left) -->
+  <div class="win" id="win-neo" style="top:24px;left:24px;width:310px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">neofetch</span></div>
+    <div class="body">
+      <div class="neo-box">
+        <pre class="neo-art">
+   /\
+  /  \
+ / /\ \
+/ ____ \
+\/    \/
+        </pre>
+        <div class="neo-info">
+          <b>bl3uz@archOS</b><br>
+          ----------------<br>
+          <b>OS:</b> Arch Linux x86_64<br>
+          <b>Host:</b> Chromebook Web<br>
+          <b>Kernel:</b> 6.12-arch-1<br>
+          <b>Shell:</b> bash 5.2<br>
+          <b>Theme:</b> cyberpunk-teal
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HTOP (Closed by default) -->
+  <div class="win" id="win-htop" style="top:140px;left:260px;width:440px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">htop</span></div>
+    <div class="body">
+      <table class="htop-table">
+        <thead>
+          <tr><th>PID</th><th>USER</th><th>CPU%</th><th>MEM%</th><th>COMMAND</th></tr>
+        </thead>
+        <tbody id="htop-body">
+          <tr><td>1337</td><td>bl3uz</td><td id="h-cpu1">4.2</td><td id="h-mem1">1.8</td><td>./archOS</td></tr>
+          <tr><td>1402</td><td>bl3uz</td><td>1.1</td><td>0.5</td><td>sys.monitor</td></tr>
+          <tr><td>1405</td><td>bl3uz</td><td id="h-cpu2">6.8</td><td>2.4</td><td>arch.player</td></tr>
+          <tr><td>1410</td><td>bl3uz</td><td>0.2</td><td>0.3</td><td>net.sh</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE TERMINAL (Closed by default) -->
   <div class="win" id="win-term" style="top:90px;left:120px;width:400px">
     <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">term.sh</span></div>
     <div class="body">
@@ -344,6 +402,7 @@
         "[ <span class='ok'>OK</span> ] Started NetworkManager (net.sh).",
         "[ <span class='ok'>OK</span> ] Started Audio Daemon (arch.player).",
         "[ <span class='ok'>OK</span> ] Started System Monitor (sys.monitor).",
+        "[ <span class='ok'>OK</span> ] Started Neofetch & Htop daemons.",
         "[ <span class='ok'>OK</span> ] Reached target Graphical Interface.",
         "",
         "Welcome to <span class='ok'>archOS</span>!"
@@ -374,7 +433,7 @@
       bootEl.onclick = finishBoot;
       runBoot();
 
-      var KEY = "archos_full_v2";
+      var KEY = "archos_full_v3";
       var state = {};
       try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
       function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -395,7 +454,7 @@
       if (state.bg) document.documentElement.style.setProperty("--bg-img", "url('" + state.bg + "')");
 
       /* ---- Window Manager ---- */
-      var z = 100, apps = {};
+      var z = 100, apps = {}, winList = [];
       function bindWin(id, el, defaultClosed) {
         var st = state[id] || (state[id] = { closed: !!defaultClosed });
         var bar = el.querySelector(".bar"), body = el.querySelector(".body");
@@ -409,12 +468,18 @@
         if (st.closed) el.style.display = "none";
         if (st.min) body.style.display = "none";
 
+        function focusWin() {
+          document.querySelectorAll(".win").forEach(function(w){ w.classList.remove("active-focus"); });
+          el.classList.add("active-focus");
+          el.style.zIndex = ++z;
+        }
+
         function setOpen(open) {
           st.closed = !open; el.style.display = open ? "" : "none";
-          if (open) el.style.zIndex = ++z;
+          if (open) focusWin();
           save(); renderBar();
         }
-        el.addEventListener("pointerdown", function () { el.style.zIndex = ++z; });
+        el.addEventListener("pointerdown", focusWin);
         if (closeBtn.tagName === "BUTTON") closeBtn.onclick = function (e) { e.stopPropagation(); setOpen(false); };
         if (minBtn.tagName === "BUTTON") minBtn.onclick = function (e) {
           e.stopPropagation(); st.min = !st.min; body.style.display = st.min ? "none" : ""; save(); renderBar();
@@ -423,6 +488,7 @@
           bar.onpointerdown = function (e) {
             if (e.target === closeBtn || e.target === minBtn || e.target.closest("[data-ws]")) return;
             e.preventDefault();
+            focusWin();
             var r = el.getBoundingClientRect();
             el.style.width = r.width + "px"; el.style.position = "fixed"; el.style.transform = "none";
             el.style.right = "auto"; el.style.bottom = "auto";
@@ -438,19 +504,50 @@
             window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
           };
         }
-        apps[id] = {
+        var appObj = {
+          id: id,
+          el: el,
           isOpen: function () { return el.style.display !== "none" && !st.min; },
-          open: function () { st.min = false; body.style.display = ""; setOpen(true); },
+          open: function () { st.min = false; body.style.display = ""; setOpen(true); focusWin(); },
           close: function () { setOpen(false); }
         };
+        apps[id] = appObj;
+        winList.push(appObj);
       }
 
       bindWin("sys.monitor", document.getElementById("win-mon"));
       bindWin("battery.sh",  document.getElementById("win-bat"));
       bindWin("net.sh",      document.getElementById("win-net"));
       bindWin("arch.player", document.getElementById("win-player"));
+      bindWin("neofetch",    document.getElementById("win-neo"));
+      bindWin("htop",        document.getElementById("win-htop"), true);
       bindWin("term.sh",     document.getElementById("win-term"), true);
       bindWin("list.sh",     document.getElementById("win-list"));
+
+      /* ---- Alt + Tab Window Switcher ---- */
+      var tabIdx = 0;
+      window.addEventListener("keydown", function(e) {
+        if (e.altKey && e.key === "Tab") {
+          e.preventDefault();
+          var openWins = winList.filter(function(a) { return a.id !== "list.sh" && a.isOpen(); });
+          if (!openWins.length) return;
+          tabIdx = (tabIdx + 1) % openWins.length;
+          var target = openWins[tabIdx];
+          target.el.style.zIndex = ++z;
+          document.querySelectorAll(".win").forEach(function(w){ w.classList.remove("active-focus"); });
+          target.el.classList.add("active-focus");
+        } else if (e.ctrlKey && ["1","2","3"].indexOf(e.key) > -1) {
+          e.preventDefault();
+          var mode = e.key === "1" ? "all" : e.key === "2" ? "focus" : "zen";
+          Object.keys(apps).forEach(function (k) {
+            if (k === "list.sh") return;
+            if (mode === "all") apps[k].open();
+            else if (mode === "zen") apps[k].close();
+            else if (mode === "focus") { if (k === "sys.monitor" || k === "arch.player") apps[k].open(); else apps[k].close(); }
+          });
+          renderBar();
+        }
+      });
 
       /* ---- Taskbar ---- */
       var tbApps = document.getElementById("tb-apps");
@@ -478,10 +575,14 @@
       document.getElementById("reset").onclick = function () { localStorage.removeItem(KEY); location.reload(); };
       renderBar();
 
-      /* ---- Sys.Monitor Visualizer + Clock + Pomo ---- */
+      /* ---- Sys.Monitor & Htop Live Data ---- */
       var vis = document.getElementById("vis"), vbars = [];
       for (var i = 0; i < 20; i++) { var b = document.createElement("div"); b.className = "vbar"; b.style.height = "20%"; vis.appendChild(b); vbars.push(b); }
-      setInterval(function () { vbars.forEach(function (vb) { vb.style.height = (15 + Math.random() * 85) + "%"; }); }, 220);
+      setInterval(function () {
+        vbars.forEach(function (vb) { vb.style.height = (15 + Math.random() * 85) + "%"; });
+        document.getElementById("h-cpu1").textContent = (2 + Math.random() * 6).toFixed(1);
+        document.getElementById("h-cpu2").textContent = (4 + Math.random() * 8).toFixed(1);
+      }, 500);
 
       var pomoSec = 1500, pomoRun = false, pomoEl = document.getElementById("pomo");
       function drawPomo() {
