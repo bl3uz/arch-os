@@ -10,25 +10,28 @@
       --accent-dim: rgba(46, 230, 214, 0.35);
       --warn: #ffcf5c;
       --danger: #e8632f;
-      --bg: rgba(8, 24, 28, 0.42);
-      --bar: rgba(16, 41, 47, 0.55);
+      --bg: rgba(8, 24, 28, 0.36);
+      --bar: rgba(16, 41, 47, 0.44);
       --border: #1b3d45;
       --text: #dcf6f2;
       --muted: #6f959c;
+      --bg-img: url('./bg.png');
     }
 
     * { box-sizing: border-box; }
     html, body {
       margin: 0; height: 100%; overflow: hidden;
-      background: #040d10 radial-gradient(circle at 50% 35%, #0c262d 0%, #040d10 75%);
+      background-color: #040d10;
+      background-image: var(--bg-img), radial-gradient(circle at 50% 35%, #0c262d 0%, #040d10 75%);
+      background-size: cover;
+      background-position: center;
       color: var(--text);
       font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Courier New", monospace;
     }
 
-    /* subtle CRT scanlines */
     body::after {
       content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 999999;
-      background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0 1px, transparent 1px 3px);
     }
 
     .win {
@@ -36,116 +39,300 @@
       background: var(--bg);
       border: 1px solid var(--border);
       box-shadow: 0 0 0 1px #030c0e, 0 0 0 3px rgba(28,61,69,0.35), 0 22px 50px -16px rgba(0,0,0,0.85);
-      backdrop-filter: blur(6px);
       display: flex; flex-direction: column;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     }
     .win:hover {
       border-color: var(--accent);
+      background: rgba(10, 32, 38, 0.52);
       box-shadow: 0 0 0 1px var(--accent), 0 0 24px var(--accent-dim), 0 24px 54px -14px rgba(0,0,0,0.9);
     }
 
     .bar {
       display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px;
       background: var(--bar); border-bottom: 1px solid var(--border);
-      cursor: grab; user-select: none; flex: none;
+      user-select: none; flex: none;
     }
+    .bar.drag { cursor: grab; }
     .bar.dragging { cursor: grabbing; }
 
     .dots { display: flex; gap: 5px; }
-    .dot { width: 8px; height: 8px; border: 0; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35); }
+    .dot { width: 7px; height: 7px; border: 0; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35); }
     .dot.close { background: var(--danger); cursor: pointer; }
     .dot.min   { background: var(--warn); cursor: pointer; }
     .dot.max   { background: var(--accent); }
     .title { margin-left: auto; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .body { padding: 10px 12px; font-size: 12px; }
+    [hidden] { display: none !important; }
 
-    .body { padding: 10px 12px; font-size: 13px; overflow: auto; }
-
-    /* Interactive Terminal */
-    .term-out {
-      margin: 0; max-height: 220px; overflow-y: auto;
-      font-size: 12px; line-height: 1.45; white-space: pre-wrap; color: #b9d9d6;
+    /* Center stack */
+    #center-col {
+      position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+      width: min(460px, calc(100vw - 32px));
+      display: flex; flex-direction: column; gap: 10px;
+      pointer-events: none; z-index: 50;
     }
-    .term-out b { color: var(--accent); font-weight: 600; }
-    .term-in { display: flex; align-items: center; gap: 8px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
-    .prompt { color: var(--accent); }
-    #cmd {
-      flex: 1; background: transparent; border: 0; outline: 0; color: var(--text);
-      font: inherit; font-size: 12px; caret-color: var(--accent);
-    }
+    #center-col .win { position: relative; pointer-events: auto; width: 100%; }
 
-    /* Slime */
-    canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; cursor: pointer; }
-    .slime-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 10px; color: var(--accent); }
+    /* Arch Logo */
+    .logo-pre {
+      margin: 6px 0 4px; font-size: 9.5px; line-height: 1.12;
+      color: var(--accent); text-align: center; white-space: pre; user-select: none;
+      text-shadow: 0 0 10px var(--accent-dim);
+    }
+    .logo-sub { text-align: center; font-size: 10px; color: var(--danger); letter-spacing: 0.08em; margin-top: 2px; }
+
+    /* Sys.Monitor */
+    .mon-grid { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .bars-vis { display: flex; align-items: flex-end; gap: 3px; height: 42px; flex: 1; }
+    .vbar { flex: 1; background: var(--accent); opacity: 0.85; transition: height 0.18s ease; }
+    .clk-big { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+    .clk-date { font-size: 9px; letter-spacing: 0.12em; color: var(--muted); margin-top: 4px; text-align: right; }
+
+    /* Search */
+    .s-field { display: flex; align-items: center; gap: 9px; padding: 10px 12px; }
+    #sq {
+      flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+      color: var(--text); font: inherit; font-size: 15px; caret-color: var(--accent);
+    }
+    #sq::placeholder { color: #4b6a70; }
+    .go {
+      border: 0; padding: 5px 11px 4px; background: var(--accent); color: #04211e;
+      font: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; cursor: pointer;
+    }
+    .s-results { list-style: none; margin: 0; padding: 4px 0; max-height: 220px; overflow-y: auto; border-top: 1px solid var(--border); background: rgba(7,21,24,0.75); }
+    .s-row { display: flex; align-items: baseline; gap: 9px; padding: 7px 12px; font-size: 12px; cursor: pointer; border-left: 2px solid transparent; }
+    .s-row.active, .s-row:hover { background: rgba(16,48,55,0.85); border-left-color: var(--accent); }
+    .s-tag { margin-left: auto; font-size: 9px; text-transform: uppercase; color: var(--muted); }
+    .s-foot { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 9px; color: #496a70; border-top: 1px solid var(--border); text-transform: uppercase; }
+
+    /* Common inner panels */
+    .panel { margin-top: 8px; padding: 3px 8px; border: 1px solid var(--border); background: rgba(7,21,24,0.45); }
+    .kv { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; border-bottom: 1px solid #143038; }
+    .kv:last-child { border-bottom: 0; }
+    .kv span:first-child { color: #496a70; text-transform: uppercase; letter-spacing: 0.12em; }
+    .kv span:last-child { color: var(--accent); font-variant-numeric: tabular-nums; }
     .btn {
-      padding: 2px 7px; border: 1px solid var(--border); background: transparent;
+      padding: 2px 6px; border: 1px solid var(--border); background: transparent;
       color: var(--muted); font: inherit; font-size: 9px; text-transform: uppercase; cursor: pointer;
     }
     .btn:hover { border-color: var(--accent); color: var(--text); }
 
+    /* Battery */
+    .bat-pct { font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .bat-bars { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; height: 9px; margin-top: 8px; }
+    .bat-seg { background: rgba(27,61,69,0.55); }
+    .bat-seg.on { background: var(--accent); }
+
+    /* Slime */
+    canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; cursor: pointer; }
+
+    /* Player */
+    .tabs { display: flex; gap: 3px; }
+    .tab { padding: 2px 6px; border: 1px solid var(--border); background: transparent; color: #496a70; font: inherit; font-size: 8px; text-transform: uppercase; cursor: pointer; }
+    .tab.active { border-color: var(--accent); color: var(--accent); background: rgba(46,230,214,0.12); }
+    .controls { display: flex; justify-content: center; gap: 4px; margin-top: 6px; }
+    .play-btn { width: 30px; height: 21px; border: 0; background: var(--accent); color: #04211e; font-weight: 700; cursor: pointer; }
+    .range { width: 100%; accent-color: var(--accent); height: 10px; }
+
+    /* Interactive Terminal */
+    .term-out { max-height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.4; white-space: pre-wrap; color: #b9d9d6; }
+    .term-out b { color: var(--accent); }
+    .term-in { display: flex; gap: 7px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border); }
+    #tcmd { flex: 1; background: transparent; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 11px; caret-color: var(--accent); }
+
     /* Taskbar */
-    #taskbar {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      width: min(620px, calc(100vw - 32px));
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      z-index: 999990; backdrop-filter: blur(6px);
+    #win-list {
+      bottom: 16px; left: 50%; transform: translateX(-50%);
+      width: min(620px, calc(100vw - 32px)); z-index: 900;
     }
-    .tb-group { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-    .pill {
-      padding: 3px 8px; border: 1px solid var(--border); background: rgba(7,21,24,0.5);
-      color: var(--muted); font: inherit; font-size: 10px; cursor: pointer;
-    }
-    .pill.open { border-color: var(--accent); color: var(--text); }
-    .pill:hover { border-color: var(--accent); color: var(--accent); }
-    .tray { font-size: 10px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+    .tb-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+    .tb-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .pill { padding: 3px 7px; border: 1px solid var(--border); background: rgba(7,21,24,0.5); color: var(--muted); font: inherit; font-size: 10px; cursor: pointer; text-decoration: none; }
+    .pill.open, .pill:hover { border-color: var(--accent); color: var(--text); }
   </style>
 </head>
 <body>
 
-  <!-- Interactive Terminal Window -->
-  <div class="win" id="win-term" style="top:44px;left:50%;width:min(480px,calc(100vw - 32px));transform:translateX(-50%)">
-    <div class="bar">
-      <div class="dots"><button class="dot close" title="Close"></button><button class="dot min" title="Minimize"></button><span class="dot max"></span></div>
-      <span class="title">term.sh</span>
-    </div>
-    <div class="body">
-      <div class="term-out" id="out">welcome to <b>archOS</b> — type <b>help</b> to see commands.</div>
-      <div class="term-in">
-        <span class="prompt">arch@os:~$</span>
-        <input id="cmd" type="text" placeholder="type a command..." autocomplete="off" spellcheck="false" autofocus />
+  <!-- CENTER STACK -->
+  <div id="center-col">
+    <div class="win" id="win-logo">
+      <div class="bar"><div class="dots"><span class="dot close"></span><span class="dot min"></span><span class="dot max"></span></div><span class="title">user@arch:~</span></div>
+      <div class="body">
+        <div style="color:#b9d9d6;font-size:12px"><span style="color:#7c9ea3">$</span> ./arch.sh</div>
+        <pre class="logo-pre">                   -`
+                  .o+`
+                 `ooo/
+                `+oooo:
+               `+oooooo:
+               -+oooooo+:
+             `/:-:++oooo+:
+            `/++++/+++++++:
+           `/++++++++++++++:
+          `/+++ooooooooooooo/`
+         ./ooosssso++osssssso+`
+        .oossssso-````/ossssss+`
+       -osssssso.      :ssssssso.
+      :osssssss/        osssso+++.
+     /ossssssss/        +ssssooo/-
+   `/ossssso+/:-        -:/+osssso+-
+  `+sso+:-`                 `.-/+oso:
+ `++:.                           `-/+/
+ .`                                 `/</pre>
+        <div class="logo-sub">- i use arch, btw -</div>
       </div>
+    </div>
+
+    <div class="win" id="win-mon">
+      <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">sys.monitor</span></div>
+      <div class="body">
+        <div class="mon-grid">
+          <div class="bars-vis" id="vis"></div>
+          <div>
+            <div class="clk-big" id="mon-clk">00:00:00</div>
+            <div class="clk-date" id="mon-date">---</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="win" id="win-search">
+      <div class="bar"><div class="dots"><span class="dot close"></span><span class="dot min"></span><span class="dot max"></span></div><span class="title">search.sh</span></div>
+      <div class="s-field">
+        <span style="color:#7c9ea3">$&gt;</span>
+        <input id="sq" type="text" placeholder="search..." autocomplete="off" spellcheck="false" autofocus />
+        <button class="go" id="sgo" type="button">GO</button>
+      </div>
+      <ul class="s-results" id="sres" hidden></ul>
+      <div class="s-foot"><span>↑↓ select · ↵ open · esc clear</span><span id="scnt"></span></div>
     </div>
   </div>
 
-  <!-- Slime Pet Window -->
-  <div class="win" id="win-slime" style="top:44px;left:24px;width:260px">
-    <div class="bar">
-      <div class="dots"><button class="dot close" title="Close"></button><button class="dot min" title="Minimize"></button><span class="dot max"></span></div>
-      <span class="title">slime.sh</span>
-    </div>
+  <!-- SLIME (Top-Left) -->
+  <div class="win" id="win-slime" style="top:24px;left:24px;width:270px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">slime.sh</span></div>
     <div class="body">
       <canvas id="cv" width="130" height="58"></canvas>
-      <div class="slime-bar">
-        <button class="btn" id="feed">feed</button>
-        <span id="mood">vibing</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <div style="display:flex;gap:4px"><button class="btn" id="s-feed">feed</button><button class="btn" id="s-sleep">sleep</button><button class="btn" id="s-hue">hue</button></div>
+        <span id="s-mood" style="color:var(--accent);font-size:10px;text-transform:uppercase">vibing</span>
       </div>
     </div>
   </div>
 
-  <!-- Bottom Taskbar -->
-  <div id="taskbar">
-    <div class="tb-group" id="tb-apps"></div>
-    <div class="tray">
-      <span id="bat">--%</span>
-      <span id="clk">--:--</span>
-      <button class="btn" id="reset" style="color:var(--danger);border-color:rgba(232,99,47,0.4)">reset</button>
+  <!-- BATTERY (Top-Right) -->
+  <div class="win" id="win-bat" style="top:24px;right:24px;width:230px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">battery.sh</span></div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="bat-pct" id="b-pct">--%</span>
+        <span id="b-st" style="font-size:9px;color:var(--muted);text-transform:uppercase">reading</span>
+      </div>
+      <div class="bat-bars" id="b-bars"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:9px;color:var(--muted);text-transform:uppercase">
+        <span id="b-lbl">power</span><span id="b-eta">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NET.SH (Bottom-Left) -->
+  <div class="win" id="win-net" style="bottom:24px;left:24px;width:320px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">user@arch:~</span></div>
+    <div class="body">
+      <div style="color:#b9d9d6"><span style="color:#7c9ea3">$</span> ./net.sh</div>
+      <div class="panel">
+        <div class="kv"><span>link</span><span id="n-wifi">…</span></div>
+        <div class="kv"><span>down</span><span id="n-down">…</span></div>
+        <div class="kv"><span>ping</span><span id="n-ping">…</span></div>
+      </div>
+      <div class="panel">
+        <div class="kv"><span>weather</span><span id="n-w" style="color:var(--warn)">…</span></div>
+        <div class="kv"><span>today</span><span id="n-f">…</span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:9px;color:var(--muted)">
+        <span><b style="color:var(--danger)">status</b> <i id="n-st">live</i></span>
+        <button class="btn" id="n-reping">ping</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCH.PLAYER (Bottom-Right) -->
+  <div class="win" id="win-player" style="bottom:24px;right:24px;width:300px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">arch.player</span></div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#b9d9d6"><span style="color:#7c9ea3">$</span> ./player.sh</span>
+        <div class="tabs"><button class="tab active" id="t-loc">local</button><button class="tab" id="t-sp">spotify</button></div>
+      </div>
+      <div id="v-loc">
+        <div id="p-now" style="margin:8px 0 4px;font-size:11px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">no track loaded</div>
+        <input id="p-seek" class="range" type="range" min="0" max="0" value="0" />
+        <div class="controls">
+          <button class="btn" id="p-prev">⏮</button>
+          <button class="play-btn" id="p-play">▶</button>
+          <button class="btn" id="p-next">⏭</button>
+          <button class="btn" id="p-add" style="background:var(--danger);color:#140705;border:0;font-weight:700">+</button>
+        </div>
+        <input id="p-file" type="file" accept="audio/*" multiple hidden />
+      </div>
+      <div id="v-sp" hidden>
+        <div class="panel" style="display:flex;justify-content:space-between;align-items:center;padding:8px">
+          <span style="font-size:10px;color:var(--muted)">SAVED PLAYLIST</span>
+          <a class="go" style="text-decoration:none" href="https://open.spotify.com/playlist/7DonEO3QSanBOXTQ5vVHdx" target="_blank">OPEN ↗</a>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="sp-q" style="flex:1;background:rgba(7,21,24,0.6);border:1px solid var(--border);color:var(--text);padding:4px 6px;font:inherit;font-size:11px" placeholder="search spotify..." />
+          <button class="btn" id="sp-go" style="border-color:var(--accent);color:var(--accent)">GO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE TERMINAL (Closed by default, spawn via search/taskbar) -->
+  <div class="win" id="win-term" style="top:90px;left:120px;width:400px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">term.sh</span></div>
+    <div class="body">
+      <div class="term-out" id="tout">type <b>help</b> for commands.</div>
+      <div class="term-in"><span style="color:var(--accent)">arch@os:~$</span><input id="tcmd" type="text" placeholder="command..." autocomplete="off" spellcheck="false" /></div>
+    </div>
+  </div>
+
+  <!-- TASKBAR (LIST.SH) -->
+  <div class="win" id="win-list">
+    <div class="bar drag">
+      <div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div>
+      <div style="display:flex;gap:4px;margin-left:8px">
+        <button class="btn" data-ws="all">1:all</button>
+        <button class="btn" data-ws="focus">2:focus</button>
+        <button class="btn" data-ws="zen">3:zen</button>
+      </div>
+      <span class="title">list.sh</span>
+    </div>
+    <div class="body" style="padding:6px 8px;display:flex;flex-direction:column;gap:5px">
+      <div class="tb-row"><div class="tb-group" id="tb-apps"></div></div>
+      <div class="tb-row">
+        <div class="tb-group">
+          <a class="pill" href="https://github.com" target="_blank">GH</a>
+          <a class="pill" href="https://youtube.com" target="_blank">YT</a>
+          <a class="pill" href="https://aistudio.google.com" target="_blank">AI</a>
+          <a class="pill" href="https://mail.google.com" target="_blank">MAIL</a>
+          <a class="pill" href="https://sos.olympiad.my.id" target="_blank">OLY</a>
+          <a class="pill" href="https://www.pinterest.com" target="_blank">PIN</a>
+          <a class="pill" href="https://open.spotify.com" target="_blank">SPOT</a>
+        </div>
+        <div class="tb-group">
+          <button class="pill" id="pomo" style="color:var(--warn)">25:00</button>
+          <span class="pill" id="tb-bat">--%</span>
+          <span class="pill" id="tb-clk">--:--</span>
+          <button class="btn" id="reset" style="color:var(--danger);border-color:rgba(232,99,47,0.45)">reset</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     (function () {
-      var KEY = "archos_v1";
+      var KEY = "archos_full_v1";
       var state = {};
       try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
       function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -157,73 +344,58 @@
         lavender: { accent: "#c792ea", dim: "rgba(199,146,234,0.35)" }
       };
       function setTheme(name) {
-        var t = THEMES[name];
-        if (!t) return false;
+        var t = THEMES[name]; if (!t) return false;
         document.documentElement.style.setProperty("--accent", t.accent);
         document.documentElement.style.setProperty("--accent-dim", t.dim);
-        state.theme = name; save();
-        return true;
+        state.theme = name; save(); return true;
       }
       if (state.theme) setTheme(state.theme);
+      if (state.bg) document.documentElement.style.setProperty("--bg-img", "url('" + state.bg + "')");
 
       /* ---- Window Manager ---- */
-      var z = 100;
-      var apps = {};
-      function bindWindow(id, el) {
-        var st = state[id] || (state[id] = {});
-        var bar = el.querySelector(".bar");
-        var body = el.querySelector(".body");
-        var closeBtn = el.querySelector(".close");
-        var minBtn = el.querySelector(".min");
+      var z = 100, apps = {};
+      function bindWin(id, el, defaultClosed) {
+        var st = state[id] || (state[id] = { closed: !!defaultClosed });
+        var bar = el.querySelector(".bar"), body = el.querySelector(".body");
+        var closeBtn = el.querySelector(".close"), minBtn = el.querySelector(".min");
 
         if (typeof st.left === "number") {
-          el.style.transform = "none";
-          el.style.left = st.left + "px";
-          el.style.top = st.top + "px";
+          el.style.position = "fixed"; el.style.transform = "none";
+          el.style.right = "auto"; el.style.bottom = "auto";
+          el.style.left = st.left + "px"; el.style.top = st.top + "px";
         }
         if (st.closed) el.style.display = "none";
         if (st.min) body.style.display = "none";
 
         function setOpen(open) {
-          st.closed = !open;
-          el.style.display = open ? "" : "none";
+          st.closed = !open; el.style.display = open ? "" : "none";
           if (open) el.style.zIndex = ++z;
           save(); renderBar();
         }
         el.addEventListener("pointerdown", function () { el.style.zIndex = ++z; });
-        closeBtn.addEventListener("click", function (e) { e.stopPropagation(); setOpen(false); });
-        minBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          st.min = !st.min;
-          body.style.display = st.min ? "none" : "";
-          save(); renderBar();
-        });
-
-        bar.addEventListener("pointerdown", function (e) {
-          if (e.target === closeBtn || e.target === minBtn) return;
-          e.preventDefault();
-          var r = el.getBoundingClientRect();
-          el.style.transform = "none";
-          el.style.left = r.left + "px";
-          el.style.top = r.top + "px";
-          bar.classList.add("dragging");
-          var dx = e.clientX - r.left, dy = e.clientY - r.top;
-          function move(ev) {
-            st.left = Math.max(0, Math.min(window.innerWidth - r.width, ev.clientX - dx));
-            st.top  = Math.max(0, Math.min(window.innerHeight - r.height, ev.clientY - dy));
-            el.style.left = st.left + "px";
-            el.style.top  = st.top + "px";
-          }
-          function up() {
-            bar.classList.remove("dragging");
-            window.removeEventListener("pointermove", move);
-            window.removeEventListener("pointerup", up);
-            save();
-          }
-          window.addEventListener("pointermove", move);
-          window.addEventListener("pointerup", up);
-        });
-
+        if (closeBtn.tagName === "BUTTON") closeBtn.onclick = function (e) { e.stopPropagation(); setOpen(false); };
+        if (minBtn.tagName === "BUTTON") minBtn.onclick = function (e) {
+          e.stopPropagation(); st.min = !st.min; body.style.display = st.min ? "none" : ""; save(); renderBar();
+        };
+        if (bar.classList.contains("drag")) {
+          bar.onpointerdown = function (e) {
+            if (e.target === closeBtn || e.target === minBtn || e.target.closest("[data-ws]")) return;
+            e.preventDefault();
+            var r = el.getBoundingClientRect();
+            el.style.width = r.width + "px"; el.style.position = "fixed"; el.style.transform = "none";
+            el.style.right = "auto"; el.style.bottom = "auto";
+            el.style.left = r.left + "px"; el.style.top = r.top + "px";
+            bar.classList.add("dragging");
+            var dx = e.clientX - r.left, dy = e.clientY - r.top;
+            function mv(ev) {
+              st.left = Math.max(0, Math.min(window.innerWidth - r.width, ev.clientX - dx));
+              st.top  = Math.max(0, Math.min(window.innerHeight - r.height, ev.clientY - dy));
+              el.style.left = st.left + "px"; el.style.top = st.top + "px";
+            }
+            function up() { bar.classList.remove("dragging"); window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); save(); }
+            window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+          };
+        }
         apps[id] = {
           isOpen: function () { return el.style.display !== "none" && !st.min; },
           open: function () { st.min = false; body.style.display = ""; setOpen(true); },
@@ -231,94 +403,202 @@
         };
       }
 
-      bindWindow("term.sh", document.getElementById("win-term"));
-      bindWindow("slime.sh", document.getElementById("win-slime"));
+      bindWin("sys.monitor", document.getElementById("win-mon"));
+      bindWin("slime.sh",    document.getElementById("win-slime"));
+      bindWin("battery.sh",  document.getElementById("win-bat"));
+      bindWin("net.sh",      document.getElementById("win-net"));
+      bindWin("arch.player", document.getElementById("win-player"));
+      bindWin("term.sh",     document.getElementById("win-term"), true);
+      bindWin("list.sh",     document.getElementById("win-list"));
 
+      /* ---- Taskbar ---- */
       var tbApps = document.getElementById("tb-apps");
       function renderBar() {
-        tbApps.innerHTML = Object.keys(apps).map(function (id) {
-          var open = apps[id].isOpen();
-          return '<button class="pill ' + (open ? 'open' : '') + '" data-app="' + id + '">' + (open ? '● ' : '○ ') + id + '</button>';
+        tbApps.innerHTML = Object.keys(apps).filter(function (k) { return k !== "list.sh"; }).map(function (k) {
+          var o = apps[k].isOpen();
+          return '<button class="pill ' + (o ? 'open' : '') + '" data-app="' + k + '">' + (o ? '● ' : '○ ') + k + '</button>';
         }).join("");
       }
-      tbApps.addEventListener("click", function (e) {
-        var btn = e.target.closest("[data-app]");
-        if (!btn) return;
-        var a = apps[btn.dataset.app];
-        if (a.isOpen()) a.close(); else a.open();
+      tbApps.onclick = function (e) {
+        var b = e.target.closest("[data-app]"); if (!b) return;
+        var a = apps[b.dataset.app]; if (a.isOpen()) a.close(); else a.open();
+      };
+      document.querySelectorAll("[data-ws]").forEach(function (btn) {
+        btn.onclick = function () {
+          var m = btn.dataset.ws;
+          Object.keys(apps).forEach(function (k) {
+            if (k === "list.sh") return;
+            if (m === "all") apps[k].open();
+            else if (m === "zen") apps[k].close();
+            else if (m === "focus") { if (k === "sys.monitor" || k === "arch.player") apps[k].open(); else apps[k].close(); }
+          });
+        };
       });
+      document.getElementById("reset").onclick = function () { localStorage.removeItem(KEY); location.reload(); };
       renderBar();
 
-      document.getElementById("reset").addEventListener("click", function () {
-        localStorage.removeItem(KEY);
-        location.reload();
+      /* ---- Sys.Monitor Visualizer + Clock + Pomo ---- */
+      var vis = document.getElementById("vis"), vbars = [];
+      for (var i = 0; i < 20; i++) { var b = document.createElement("div"); b.className = "vbar"; b.style.height = "20%"; vis.appendChild(b); vbars.push(b); }
+      setInterval(function () { vbars.forEach(function (vb) { vb.style.height = (15 + Math.random() * 85) + "%"; }); }, 220);
+
+      var pomoSec = 1500, pomoRun = false, pomoEl = document.getElementById("pomo");
+      function drawPomo() {
+        var m = Math.floor(pomoSec/60), s = pomoSec%60;
+        pomoEl.textContent = (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+        pomoEl.style.color = pomoRun ? "var(--accent)" : "var(--warn)";
+      }
+      pomoEl.onclick = function () { if (pomoSec<=0) pomoSec=1500; pomoRun = !pomoRun; drawPomo(); };
+      pomoEl.ondblclick = function () { pomoRun = false; pomoSec = 1500; drawPomo(); };
+
+      function tick() {
+        var d = new Date(), p = function (n) { return n<10?"0"+n:n; };
+        document.getElementById("mon-clk").textContent = p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());
+        document.getElementById("mon-date").textContent = d.toDateString().toUpperCase();
+        document.getElementById("tb-clk").textContent = p(d.getHours())+":"+p(d.getMinutes());
+        if (pomoRun && pomoSec > 0) { pomoSec--; if (!pomoSec) pomoRun = false; drawPomo(); }
+      }
+      tick(); setInterval(tick, 1000);
+
+      /* ---- Battery ---- */
+      var bBars = document.getElementById("b-bars"), bSegs = [];
+      for (var j = 0; j < 10; j++) { var sg = document.createElement("div"); sg.className = "bat-seg"; bBars.appendChild(sg); bSegs.push(sg); }
+      if (navigator.getBattery) navigator.getBattery().then(function (bat) {
+        function upd() {
+          var pct = Math.round(bat.level * 100), fill = Math.round(pct / 10);
+          document.getElementById("b-pct").textContent = pct + "%";
+          document.getElementById("b-st").textContent = bat.charging ? "charging" : "on battery";
+          document.getElementById("tb-bat").textContent = (bat.charging ? "⚡" : "") + pct + "%";
+          bSegs.forEach(function (s, idx) { s.className = "bat-seg" + (idx < fill ? " on" : ""); });
+          var sec = bat.charging ? bat.chargingTime : bat.dischargingTime;
+          document.getElementById("b-lbl").textContent = bat.charging ? "full in" : "left";
+          document.getElementById("b-eta").textContent = (!sec || !isFinite(sec)) ? "--" : Math.floor(sec/3600)+"h "+Math.round((sec%3600)/60)+"m";
+        }
+        upd(); ["levelchange","chargingchange","chargingtimechange","dischargingtimechange"].forEach(function (ev) { bat.addEventListener(ev, upd); });
       });
 
-      /* ---- Interactive Terminal ---- */
-      var out = document.getElementById("out");
-      var cmd = document.getElementById("cmd");
-      function print(html) {
-        out.innerHTML += "\n" + html;
-        out.scrollTop = out.scrollHeight;
+      /* ---- Net.sh ---- */
+      function runPing() {
+        var t0 = performance.now();
+        fetch("https://www.google.com/generate_204?_=" + Date.now(), { mode: "no-cors", cache: "no-store" })
+          .then(function () { document.getElementById("n-ping").textContent = Math.round(performance.now()-t0)+" ms"; document.getElementById("n-st").textContent = "live"; })
+          .catch(function () { document.getElementById("n-ping").textContent = "offline"; document.getElementById("n-st").textContent = "offline"; });
       }
-      cmd.addEventListener("keydown", function (e) {
-        if (e.key !== "Enter") return;
-        var raw = cmd.value.trim();
-        cmd.value = "";
-        if (!raw) return;
-        print('<span class="prompt">arch@os:~$</span> ' + raw.replace(/</g, "&lt;"));
-        var parts = raw.split(/\s+/);
-        var c = parts[0].toLowerCase(), arg = parts.slice(1).join(" ");
-        if (c === "help") print("commands: <b>neofetch</b>, <b>theme</b> [teal|amber|coral|lavender], <b>open</b> [app], <b>g</b> &lt;query&gt;, <b>clear</b>");
-        else if (c === "clear") out.innerHTML = "";
-        else if (c === "neofetch") print("<b>   /\\</b>      archOS web\n<b>  /  \\</b>     theme: " + (state.theme || "teal") + "\n<b> /    \\</b>    host: chromebook");
-        else if (c === "theme") print(setTheme(arg) ? "theme set to <b>" + arg + "</b>" : "try: teal, amber, coral, lavender");
-        else if (c === "open" && apps[arg]) { apps[arg].open(); print("opened <b>" + arg + "</b>"); }
-        else if (c === "g" && arg) window.open("https://www.google.com/search?q=" + encodeURIComponent(arg), "_blank");
-        else print("unknown command: " + c + " (try <b>help</b>)");
-      });
+      function readNet() {
+        var c = navigator.connection || {};
+        document.getElementById("n-wifi").textContent = c.effectiveType || "n/a";
+        document.getElementById("n-down").textContent = c.downlink ? c.downlink + " Mb/s" : "n/a";
+        runPing();
+      }
+      document.getElementById("n-reping").onclick = runPing;
+      readNet(); setInterval(readNet, 5000);
+      fetch("https://wttr.in/?format=j1", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+        var cur = j.current_condition[0], t = j.weather[0], rain = 0;
+        t.hourly.forEach(function (h) { rain = Math.max(rain, parseInt(h.chanceofrain, 10) || 0); });
+        document.getElementById("n-w").textContent = cur.temp_C + "°C " + cur.weatherDesc[0].value;
+        document.getElementById("n-f").textContent = t.mintempC + "–" + t.maxtempC + "°C · rain " + rain + "%";
+      }).catch(function () {});
 
       /* ---- Slime ---- */
-      var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-      var mood = document.getElementById("mood");
-      var s = { x: 70, y: 44, vy: 0, dir: 1, t: 0 }, food = null;
-      document.getElementById("feed").onclick = function () { food = { x: 30 + Math.random()*75, y: 8, vy: 0 }; mood.textContent = "snack!"; };
-      cv.onclick = function () { s.vy = -2.2; mood.textContent = "happy!"; };
+      var cv = document.getElementById("cv"), ctx = cv.getContext("2d"), mood = document.getElementById("s-mood");
+      var sl = { x: 74, y: 44, vy: 0, dir: 1, sleep: false, t: 0 }, food = null, hues = ["#2ee6d6","#ffcf5c","#e8632f","#c792ea"], hIdx = 0;
+      document.getElementById("s-feed").onclick = function () { sl.sleep=false; food={x:34+Math.random()*75,y:8,vy:0}; mood.textContent="snack!"; };
+      document.getElementById("s-sleep").onclick = function () { sl.sleep=!sl.sleep; mood.textContent=sl.sleep?"zzz":"awake!"; };
+      document.getElementById("s-hue").onclick = function () { hIdx=(hIdx+1)%hues.length; };
+      cv.onclick = function () { sl.sleep=false; sl.vy=-2.2; mood.textContent="happy!"; };
       function px(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
-      function loop() {
-        s.t++;
-        if (food) { food.vy += 0.14; food.y += food.vy; if (food.y >= 41) { food.y = 41; food.vy = 0; } }
-        if (food) {
-          var dx = food.x - s.x;
-          if (Math.abs(dx) > 3) { s.dir = dx > 0 ? 1 : -1; s.x += s.dir * 0.55; }
-          else { food = null; s.vy = -1.8; mood.textContent = "nom nom"; }
-        } else if (s.t % 2 === 0) {
-          s.x += s.dir * 0.22;
-          if (s.x > 112) s.dir = -1; if (s.x < 32) s.dir = 1;
+      function sLoop() {
+        sl.t++;
+        if (food) { food.vy+=0.14; food.y+=food.vy; if (food.y>=41){food.y=41;food.vy=0;} }
+        if (!sl.sleep) {
+          if (food) {
+            var dx = food.x - sl.x;
+            if (Math.abs(dx)>3) { sl.dir=dx>0?1:-1; sl.x+=sl.dir*0.55; } else { food=null; sl.vy=-1.8; mood.textContent="nom nom"; }
+          } else if (sl.t%2===0) { sl.x+=sl.dir*0.22; if(sl.x>112)sl.dir=-1; if(sl.x<32)sl.dir=1; }
         }
-        if (s.y < 44 || s.vy < 0) { s.vy += 0.14; s.y += s.vy; if (s.y >= 44) { s.y = 44; s.vy = 0; } }
-        ctx.clearRect(0,0,130,58);
-        px(6,44,118,3,"#1b3d45");
-        if (food) px(food.x-2, food.y-1, 4, 4, "#e8632f");
-        var accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2ee6d6";
-        var sq = s.y < 44 ? -2 : Math.sin(s.t*0.14)*1.2;
-        var sw = Math.round(16 + sq*1.4), sh = Math.round(11 - sq);
-        var sx = Math.round(s.x - sw/2), sy = Math.round(s.y - sh);
-        px(sx+2,sy,sw-4,sh,accent); px(sx,sy+3,sw,sh-3,accent);
-        px(sx+5,sy+4,2,2,"#04211e"); px(sx+9,sy+4,2,2,"#04211e");
-        requestAnimationFrame(loop);
+        if (sl.y<44||sl.vy<0){ sl.vy+=0.14; sl.y+=sl.vy; if(sl.y>=44){sl.y=44;sl.vy=0;} }
+        ctx.clearRect(0,0,130,58); px(6,44,118,3,"#1b3d45"); px(12,39,6,5,"#8d3517"); px(14,34,2,5,"#46cdbb");
+        if (food) px(food.x-2,food.y-1,4,4,"#e8632f");
+        var sq = sl.y<44?-2:(sl.sleep?2:Math.sin(sl.t*0.14)*1.2), sw=Math.round(16+sq*1.4), sh=Math.round(11-sq), sx=Math.round(sl.x-sw/2), sy=Math.round(sl.y-sh);
+        px(sx+2,sy,sw-4,sh,hues[hIdx]); px(sx,sy+3,sw,sh-3,hues[hIdx]);
+        if (!sl.sleep) { px(sx+5,sy+4,2,2,"#04211e"); px(sx+9,sy+4,2,2,"#04211e"); }
+        requestAnimationFrame(sLoop);
       }
-      requestAnimationFrame(loop);
+      requestAnimationFrame(sLoop);
 
-      /* ---- Clock & Battery ---- */
-      setInterval(function () {
-        var d = new Date(), p = function (n) { return n < 10 ? "0"+n : n; };
-        document.getElementById("clk").textContent = p(d.getHours()) + ":" + p(d.getMinutes());
-      }, 1000);
-      if (navigator.getBattery) navigator.getBattery().then(function (b) {
-        function u() { document.getElementById("bat").textContent = (b.charging ? "⚡" : "") + Math.round(b.level*100) + "%"; }
-        u(); b.addEventListener("levelchange", u); b.addEventListener("chargingchange", u);
-      });
+      /* ---- Player ---- */
+      document.getElementById("t-loc").onclick = function () { this.className="tab active"; document.getElementById("t-sp").className="tab"; document.getElementById("v-loc").hidden=false; document.getElementById("v-sp").hidden=true; };
+      document.getElementById("t-sp").onclick  = function () { this.className="tab active"; document.getElementById("t-loc").className="tab"; document.getElementById("v-loc").hidden=true; document.getElementById("v-sp").hidden=false; };
+      document.getElementById("sp-go").onclick = function () {
+        var q = document.getElementById("sp-q").value.trim();
+        window.open(q ? "https://open.spotify.com/search/" + encodeURIComponent(q) : "https://open.spotify.com/playlist/7DonEO3QSanBOXTQ5vVHdx", "_blank");
+      };
+      var aud = new Audio(), tracks = [], idx = 0;
+      document.getElementById("p-add").onclick = function () { document.getElementById("p-file").click(); };
+      document.getElementById("p-file").onchange = function (e) {
+        for (var k=0;k<e.target.files.length;k++) tracks.push({ name: e.target.files[k].name, url: URL.createObjectURL(e.target.files[k]) });
+        if (tracks.length && !aud.src) { aud.src = tracks[0].url; document.getElementById("p-now").textContent = tracks[0].name; }
+      };
+      document.getElementById("p-play").onclick = function () { if (!aud.src) return; if (aud.paused) { aud.play(); this.textContent="⏸"; } else { aud.pause(); this.textContent="▶"; } };
+      document.getElementById("p-next").onclick = function () { if (!tracks.length) return; idx=(idx+1)%tracks.length; aud.src=tracks[idx].url; aud.play(); document.getElementById("p-now").textContent=tracks[idx].name; };
+      document.getElementById("p-prev").onclick = function () { if (!tracks.length) return; idx=(idx-1+tracks.length)%tracks.length; aud.src=tracks[idx].url; aud.play(); document.getElementById("p-now").textContent=tracks[idx].name; };
+      aud.ontimeupdate = function () { var s = document.getElementById("p-seek"); s.max = aud.duration || 0; s.value = aud.currentTime; };
+      document.getElementById("p-seek").oninput = function () { aud.currentTime = this.value; };
+
+      /* ---- Search.sh ---- */
+      var ITEMS = [
+        { title: "GitHub", url: "https://github.com", tag: "code" },
+        { title: "YouTube", url: "https://youtube.com", tag: "media" },
+        { title: "AI Studio", url: "https://aistudio.google.com", tag: "ai" },
+        { title: "Gmail", url: "https://mail.google.com", tag: "mail" },
+        { title: "sos.olympiad.my.id", url: "https://sos.olympiad.my.id", tag: "oly" },
+        { title: "Pinterest", url: "https://www.pinterest.com", tag: "pins" },
+        { title: "Spotify", url: "https://open.spotify.com", tag: "music" }
+      ];
+      var BANGS = { yt: "https://www.youtube.com/results?search_query=", gh: "https://github.com/search?q=", w: "https://en.wikipedia.org/w/index.php?search=", r: "https://www.reddit.com/search/?q=" };
+      var sq = document.getElementById("sq"), sres = document.getElementById("sres"), rows = [], act = 0;
+      function renderS() {
+        var q = sq.value.trim(); if (!q) { sres.hidden = true; return; }
+        rows = [];
+        var bm = q.match(/^([a-z]+)\s+(.+)$/i);
+        if (bm && BANGS[bm[1].toLowerCase()]) rows.push({ label: bm[1] + ": " + bm[2], url: BANGS[bm[1].toLowerCase()] + encodeURIComponent(bm[2]), tag: "bang" });
+        Object.keys(apps).forEach(function (k) { if (k.indexOf(q.toLowerCase()) > -1) rows.push({ label: k, app: apps[k], tag: apps[k].isOpen() ? "open" : "spawn" }); });
+        ITEMS.forEach(function (it) { if (it.title.toLowerCase().indexOf(q.toLowerCase()) > -1) rows.push({ label: it.title, url: it.url, tag: it.tag }); });
+        rows.push({ label: "google: " + q, url: "https://www.google.com/search?q=" + encodeURIComponent(q), tag: "web" });
+        act = 0; drawS();
+      }
+      function drawS() {
+        sres.innerHTML = rows.map(function (r, i) {
+          return '<li class="s-row ' + (i === act ? 'active' : '') + '" data-i="' + i + '"><span>' + r.label + '</span><span class="s-tag">' + r.tag + '</span></li>';
+        }).join("");
+        sres.hidden = false;
+      }
+      function goS(r) { if (!r) return; if (r.app) { r.app.open(); sq.value = ""; sres.hidden = true; } else window.open(r.url, "_blank"); }
+      sq.oninput = renderS;
+      sq.onkeydown = function (e) {
+        if (e.key === "ArrowDown") { e.preventDefault(); act = (act + 1) % rows.length; drawS(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); act = (act - 1 + rows.length) % rows.length; drawS(); }
+        else if (e.key === "Enter") { e.preventDefault(); goS(rows[act]); }
+        else if (e.key === "Escape") { sq.value = ""; sres.hidden = true; }
+      };
+      sres.onmousedown = function (e) { var li = e.target.closest("[data-i]"); if (li) goS(rows[li.dataset.i]); };
+      document.getElementById("sgo").onclick = function () { goS(rows[act]); };
+
+      /* ---- Interactive Term.sh ---- */
+      var tout = document.getElementById("tout"), tcmd = document.getElementById("tcmd");
+      tcmd.onkeydown = function (e) {
+        if (e.key !== "Enter") return;
+        var raw = tcmd.value.trim(); tcmd.value = ""; if (!raw) return;
+        tout.innerHTML += "\n<b>arch@os:~$</b> " + raw.replace(/</g, "&lt;");
+        var p = raw.split(/\s+/), c = p[0].toLowerCase(), arg = p.slice(1).join(" ");
+        if (c === "help") tout.innerHTML += "\n<b>theme</b> teal|amber|coral|lavender, <b>bg</b> &lt;url&gt;, <b>open</b> &lt;app&gt;, <b>clear</b>";
+        else if (c === "clear") tout.innerHTML = "";
+        else if (c === "theme") tout.innerHTML += setTheme(arg) ? "\ntheme: <b>" + arg + "</b>" : "\ntry: teal, amber, coral, lavender";
+        else if (c === "bg" && arg) { state.bg = arg; save(); document.documentElement.style.setProperty("--bg-img", "url('" + arg + "')"); tout.innerHTML += "\nwallpaper updated"; }
+        else if (c === "open" && apps[arg]) { apps[arg].open(); tout.innerHTML += "\nopened <b>" + arg + "</b>"; }
+        else tout.innerHTML += "\nunknown: " + c;
+        tout.scrollTop = tout.scrollHeight;
+      };
     })();
   </script>
 </body>
