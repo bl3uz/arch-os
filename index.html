@@ -136,9 +136,6 @@
     .bat-seg { background: rgba(27,61,69,0.55); }
     .bat-seg.on { background: var(--accent); }
 
-    /* Slime */
-    canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; cursor: pointer; }
-
     /* Player */
     .tabs { display: flex; gap: 3px; }
     .tab { padding: 2px 6px; border: 1px solid var(--border); background: transparent; color: #496a70; font: inherit; font-size: 8px; text-transform: uppercase; cursor: pointer; }
@@ -223,18 +220,6 @@
       </div>
       <ul class="s-results" id="sres" hidden></ul>
       <div class="s-foot"><span>↑↓ select · ↵ open · esc clear</span><span id="scnt"></span></div>
-    </div>
-  </div>
-
-  <!-- SLIME (Top-Left) -->
-  <div class="win" id="win-slime" style="top:24px;left:24px;width:270px">
-    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">slime.sh</span></div>
-    <div class="body">
-      <canvas id="cv" width="130" height="58"></canvas>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <div style="display:flex;gap:4px"><button class="btn" id="s-feed">feed</button><button class="btn" id="s-sleep">sleep</button><button class="btn" id="s-hue">hue</button></div>
-        <span id="s-mood" style="color:var(--accent);font-size:10px;text-transform:uppercase">vibing</span>
-      </div>
     </div>
   </div>
 
@@ -357,7 +342,6 @@
         "",
         "[ <span class='ok'>OK</span> ] Mounted /dev/chromebook.",
         "[ <span class='ok'>OK</span> ] Started NetworkManager (net.sh).",
-        "[ <span class='ok'>OK</span> ] Loaded Kernel Module slime_pet.",
         "[ <span class='ok'>OK</span> ] Started Audio Daemon (arch.player).",
         "[ <span class='ok'>OK</span> ] Started System Monitor (sys.monitor).",
         "[ <span class='ok'>OK</span> ] Reached target Graphical Interface.",
@@ -390,7 +374,7 @@
       bootEl.onclick = finishBoot;
       runBoot();
 
-      var KEY = "archos_full_v1";
+      var KEY = "archos_full_v2";
       var state = {};
       try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
       function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -462,7 +446,6 @@
       }
 
       bindWin("sys.monitor", document.getElementById("win-mon"));
-      bindWin("slime.sh",    document.getElementById("win-slime"));
       bindWin("battery.sh",  document.getElementById("win-bat"));
       bindWin("net.sh",      document.getElementById("win-net"));
       bindWin("arch.player", document.getElementById("win-player"));
@@ -556,33 +539,6 @@
         document.getElementById("n-w").textContent = cur.temp_C + "°C " + cur.weatherDesc[0].value;
         document.getElementById("n-f").textContent = t.mintempC + "–" + t.maxtempC + "°C · rain " + rain + "%";
       }).catch(function () {});
-
-      /* ---- Slime ---- */
-      var cv = document.getElementById("cv"), ctx = cv.getContext("2d"), mood = document.getElementById("s-mood");
-      var sl = { x: 74, y: 44, vy: 0, dir: 1, sleep: false, t: 0 }, food = null, hues = ["#2ee6d6","#ffcf5c","#e8632f","#c792ea"], hIdx = 0;
-      document.getElementById("s-feed").onclick = function () { sl.sleep=false; food={x:34+Math.random()*75,y:8,vy:0}; mood.textContent="snack!"; };
-      document.getElementById("s-sleep").onclick = function () { sl.sleep=!sl.sleep; mood.textContent=sl.sleep?"zzz":"awake!"; };
-      document.getElementById("s-hue").onclick = function () { hIdx=(hIdx+1)%hues.length; };
-      cv.onclick = function () { sl.sleep=false; sl.vy=-2.2; mood.textContent="happy!"; };
-      function px(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
-      function sLoop() {
-        sl.t++;
-        if (food) { food.vy+=0.14; food.y+=food.vy; if (food.y>=41){food.y=41;food.vy=0;} }
-        if (!sl.sleep) {
-          if (food) {
-            var dx = food.x - sl.x;
-            if (Math.abs(dx)>3) { sl.dir=dx>0?1:-1; sl.x+=sl.dir*0.55; } else { food=null; sl.vy=-1.8; mood.textContent="nom nom"; }
-          } else if (sl.t%2===0) { sl.x+=sl.dir*0.22; if(sl.x>112)sl.dir=-1; if(sl.x<32)sl.dir=1; }
-        }
-        if (sl.y<44||sl.vy<0){ sl.vy+=0.14; sl.y+=sl.vy; if(sl.y>=44){sl.y=44;sl.vy=0;} }
-        ctx.clearRect(0,0,130,58); px(6,44,118,3,"#1b3d45"); px(12,39,6,5,"#8d3517"); px(14,34,2,5,"#46cdbb");
-        if (food) px(food.x-2,food.y-1,4,4,"#e8632f");
-        var sq = sl.y<44?-2:(sl.sleep?2:Math.sin(sl.t*0.14)*1.2), sw=Math.round(16+sq*1.4), sh=Math.round(11-sq), sx=Math.round(sl.x-sw/2), sy=Math.round(sl.y-sh);
-        px(sx+2,sy,sw-4,sh,hues[hIdx]); px(sx,sy+3,sw,sh-3,hues[hIdx]);
-        if (!sl.sleep) { px(sx+5,sy+4,2,2,"#04211e"); px(sx+9,sy+4,2,2,"#04211e"); }
-        requestAnimationFrame(sLoop);
-      }
-      requestAnimationFrame(sLoop);
 
       /* ---- Player ---- */
       document.getElementById("t-loc").onclick = function () { this.className="tab active"; document.getElementById("t-sp").className="tab"; document.getElementById("v-loc").hidden=false; document.getElementById("v-sp").hidden=true; };
