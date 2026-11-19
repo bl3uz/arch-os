@@ -154,14 +154,17 @@
     .term-in { display: flex; gap: 7px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border); }
     #tcmd { flex: 1; background: transparent; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 11px; caret-color: var(--accent); }
 
-    /* Neofetch */
+    /* Neofetch & Weather */
     .neo-box { display: flex; gap: 12px; align-items: center; font-size: 11px; }
     .neo-art { color: var(--accent); font-size: 9px; line-height: 1.1; white-space: pre; }
     .neo-info b { color: var(--accent); }
+    .wx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; text-align: center; }
+    .wx-day { padding: 4px; border: 1px solid var(--border); background: rgba(7,21,24,0.5); font-size: 10px; }
+    .wx-day b { color: var(--accent); display: block; font-size: 11px; margin-bottom: 2px; }
 
     /* Htop */
     .htop-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    .htop-table th { color: var(--muted); text-align: left; border-bottom: 1px solid var(--border); padding-bottom: 3px; font-weight: normal; }
+    .htop-table th { color: var(--muted); text-align: left; border-bottom: 1px solid #1b3d45; padding-bottom: 3px; font-weight: normal; }
     .htop-table td { padding: 3px 0; border-bottom: 1px solid #143038; font-variant-numeric: tabular-nums; }
     .htop-table tr:last-child td { border-bottom: 0; }
 
@@ -331,6 +334,26 @@
     </div>
   </div>
 
+  <!-- WEATHER.SH (Closed by default) -->
+  <div class="win" id="win-weather" style="top:190px;left:24px;width:320px">
+    <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">weather.sh</span></div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span id="wx-cond" style="font-size:14px;font-weight:700;color:var(--accent)">loading…</span>
+        <span id="wx-temp" style="font-size:18px;font-weight:700;color:var(--warn)">--°C</span>
+      </div>
+      <div class="panel" style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+        <span id="wx-wind">wind: --</span>
+        <span id="wx-hum">humidity: --</span>
+      </div>
+      <div class="wx-grid" id="wx-forecast">
+        <div class="wx-day"><b>--</b><span>--°</span></div>
+        <div class="wx-day"><b>--</b><span>--°</span></div>
+        <div class="wx-day"><b>--</b><span>--°</span></div>
+      </div>
+    </div>
+  </div>
+
   <!-- HTOP (Closed by default) -->
   <div class="win" id="win-htop" style="top:140px;left:260px;width:440px">
     <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">htop</span></div>
@@ -402,7 +425,7 @@
         "[ <span class='ok'>OK</span> ] Started NetworkManager (net.sh).",
         "[ <span class='ok'>OK</span> ] Started Audio Daemon (arch.player).",
         "[ <span class='ok'>OK</span> ] Started System Monitor (sys.monitor).",
-        "[ <span class='ok'>OK</span> ] Started Neofetch & Htop daemons.",
+        "[ <span class='ok'>OK</span> ] Started Weather Daemon (weather.sh).",
         "[ <span class='ok'>OK</span> ] Reached target Graphical Interface.",
         "",
         "Welcome to <span class='ok'>archOS</span>!"
@@ -433,7 +456,7 @@
       bootEl.onclick = finishBoot;
       runBoot();
 
-      var KEY = "archos_full_v3";
+      var KEY = "archos_full_v4";
       var state = {};
       try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
       function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -520,6 +543,7 @@
       bindWin("net.sh",      document.getElementById("win-net"));
       bindWin("arch.player", document.getElementById("win-player"));
       bindWin("neofetch",    document.getElementById("win-neo"));
+      bindWin("weather.sh",  document.getElementById("win-weather"), true);
       bindWin("htop",        document.getElementById("win-htop"), true);
       bindWin("term.sh",     document.getElementById("win-term"), true);
       bindWin("list.sh",     document.getElementById("win-list"));
@@ -619,7 +643,7 @@
         upd(); ["levelchange","chargingchange","chargingtimechange","dischargingtimechange"].forEach(function (ev) { bat.addEventListener(ev, upd); });
       });
 
-      /* ---- Net.sh ---- */
+      /* ---- Net.sh & Weather.sh ---- */
       function runPing() {
         var t0 = performance.now();
         fetch("https://www.google.com/generate_204?_=" + Date.now(), { mode: "no-cors", cache: "no-store" })
@@ -634,11 +658,26 @@
       }
       document.getElementById("n-reping").onclick = runPing;
       readNet(); setInterval(readNet, 5000);
+
       fetch("https://wttr.in/?format=j1", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
         var cur = j.current_condition[0], t = j.weather[0], rain = 0;
         t.hourly.forEach(function (h) { rain = Math.max(rain, parseInt(h.chanceofrain, 10) || 0); });
         document.getElementById("n-w").textContent = cur.temp_C + "°C " + cur.weatherDesc[0].value;
         document.getElementById("n-f").textContent = t.mintempC + "–" + t.maxtempC + "°C · rain " + rain + "%";
+
+        // Weather.sh window data
+        document.getElementById("wx-cond").textContent = cur.weatherDesc[0].value;
+        document.getElementById("wx-temp").textContent = cur.temp_C + "°C";
+        document.getElementById("wx-wind").textContent = "wind: " + cur.windspeedKmph + " km/h";
+        document.getElementById("wx-hum").textContent = "humidity: " + cur.humidity + "%";
+
+        var fcHtml = "";
+        for (var f = 0; f < 3 && f < j.weather.length; f++) {
+          var day = j.weather[f];
+          var dateStr = f === 0 ? "Today" : f === 1 ? "Tomorrow" : "Day " + (f+1);
+          fcHtml += '<div class="wx-day"><b>' + dateStr + '</b><span>' + day.mintempC + '°/' + day.maxtempC + '°</span></div>';
+        }
+        document.getElementById("wx-forecast").innerHTML = fcHtml;
       }).catch(function () {});
 
       /* ---- Player ---- */
