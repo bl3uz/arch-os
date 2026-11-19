@@ -34,6 +34,18 @@
       background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0 1px, transparent 1px 3px);
     }
 
+    /* Boot Screen */
+    #boot {
+      position: fixed; inset: 0; z-index: 999995;
+      background: #040d10; color: #b9d9d6;
+      padding: 28px 32px; font-size: 13px; line-height: 1.55;
+      display: flex; flex-direction: column; justify-content: flex-start;
+      transition: opacity 0.3s ease; cursor: pointer;
+    }
+    #boot.fade { opacity: 0; pointer-events: none; }
+    .ok { color: var(--accent); font-weight: 700; }
+    .boot-hint { margin-top: auto; font-size: 10px; color: #496a70; letter-spacing: 0.12em; text-transform: uppercase; }
+
     .win {
       position: fixed;
       background: var(--bg);
@@ -153,6 +165,12 @@
   </style>
 </head>
 <body>
+
+  <!-- ARCH BOOT SCREEN -->
+  <div id="boot">
+    <div id="boot-log"></div>
+    <div class="boot-hint">click or press any key to skip</div>
+  </div>
 
   <!-- CENTER STACK -->
   <div id="center-col">
@@ -288,7 +306,7 @@
     </div>
   </div>
 
-  <!-- INTERACTIVE TERMINAL (Closed by default, spawn via search/taskbar) -->
+  <!-- INTERACTIVE TERMINAL -->
   <div class="win" id="win-term" style="top:90px;left:120px;width:400px">
     <div class="bar drag"><div class="dots"><button class="dot close"></button><button class="dot min"></button><span class="dot max"></span></div><span class="title">term.sh</span></div>
     <div class="body">
@@ -332,6 +350,46 @@
 
   <script>
     (function () {
+      /* ---- Boot Sequence ---- */
+      var bootEl = document.getElementById("boot"), bootLog = document.getElementById("boot-log");
+      var BOOT_LINES = [
+        "archOS 2026.11 LTS (tty1)",
+        "",
+        "[ <span class='ok'>OK</span> ] Mounted /dev/chromebook.",
+        "[ <span class='ok'>OK</span> ] Started NetworkManager (net.sh).",
+        "[ <span class='ok'>OK</span> ] Loaded Kernel Module slime_pet.",
+        "[ <span class='ok'>OK</span> ] Started Audio Daemon (arch.player).",
+        "[ <span class='ok'>OK</span> ] Started System Monitor (sys.monitor).",
+        "[ <span class='ok'>OK</span> ] Reached target Graphical Interface.",
+        "",
+        "Welcome to <span class='ok'>archOS</span>!"
+      ];
+      var bootTimers = [];
+      function finishBoot() {
+        bootTimers.forEach(clearTimeout);
+        bootEl.classList.add("fade");
+        setTimeout(function () { bootEl.style.display = "none"; }, 300);
+        window.removeEventListener("keydown", finishBoot);
+      }
+      function runBoot() {
+        bootTimers.forEach(clearTimeout);
+        bootTimers = [];
+        bootLog.innerHTML = "";
+        bootEl.style.display = "flex";
+        bootEl.classList.remove("fade");
+        BOOT_LINES.forEach(function (line, i) {
+          bootTimers.push(setTimeout(function () {
+            var d = document.createElement("div");
+            d.innerHTML = line || "&nbsp;";
+            bootLog.appendChild(d);
+            if (i === BOOT_LINES.length - 1) bootTimers.push(setTimeout(finishBoot, 350));
+          }, i * 110));
+        });
+        window.addEventListener("keydown", finishBoot, { once: true });
+      }
+      bootEl.onclick = finishBoot;
+      runBoot();
+
       var KEY = "archos_full_v1";
       var state = {};
       try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
@@ -591,8 +649,9 @@
         var raw = tcmd.value.trim(); tcmd.value = ""; if (!raw) return;
         tout.innerHTML += "\n<b>arch@os:~$</b> " + raw.replace(/</g, "&lt;");
         var p = raw.split(/\s+/), c = p[0].toLowerCase(), arg = p.slice(1).join(" ");
-        if (c === "help") tout.innerHTML += "\n<b>theme</b> teal|amber|coral|lavender, <b>bg</b> &lt;url&gt;, <b>open</b> &lt;app&gt;, <b>clear</b>";
+        if (c === "help") tout.innerHTML += "\n<b>theme</b> teal|amber|coral|lavender, <b>bg</b> &lt;url&gt;, <b>open</b> &lt;app&gt;, <b>reboot</b>, <b>clear</b>";
         else if (c === "clear") tout.innerHTML = "";
+        else if (c === "reboot") { runBoot(); }
         else if (c === "theme") tout.innerHTML += setTheme(arg) ? "\ntheme: <b>" + arg + "</b>" : "\ntry: teal, amber, coral, lavender";
         else if (c === "bg" && arg) { state.bg = arg; save(); document.documentElement.style.setProperty("--bg-img", "url('" + arg + "')"); tout.innerHTML += "\nwallpaper updated"; }
         else if (c === "open" && apps[arg]) { apps[arg].open(); tout.innerHTML += "\nopened <b>" + arg + "</b>"; }
